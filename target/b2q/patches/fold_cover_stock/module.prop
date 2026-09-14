@@ -1,0 +1,4 @@
+id=b2q_fold_cover_stock
+name=Galaxy Z Flip3 stock fold, cover display and Flex mode support
+author=UN1CA b2q port
+description=Restores stock SM-F711B device-state/display configuration and fills the foldable-only Samsung Flex mode panel when the One UI 8 slab-phone donor does not provide it. Does not downgrade donor SystemUI, Settings or AOD.

@@ -179,6 +179,7 @@ fi
     "$TARGET_DVFSAPP_CONFIG_SSRM_POLICY_FILENAME" \
     "$TARGET_DVFSAPP_CONFIG_DVFS_POLICY_FILENAME"
 "$ROOT/scripts/prepare_b2q_overlay.sh" "$TARGET_FIRMWARE_DIR"
+"$ROOT/scripts/prepare_b2q_fold_cover.sh" "$TARGET_FIRMWARE_DIR"
 "$ROOT/scripts/prepare_b2q_vintf.sh" "$TARGET_FIRMWARE_DIR"
 "$ROOT/scripts/audit_b2q_firmware.sh" "$TARGET_FIRMWARE_DIR"
 

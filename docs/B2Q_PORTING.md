@@ -199,3 +199,8 @@ stock `compatibility_matrix.device.xml` from the extracted SM-F711B system
 partition. The exact file is copied to `target/b2q/vintf/` with a source path
 and SHA-256 marker. Do not replace it with a matrix from another device or an
 empty permissive placeholder.
+
+
+## Foldable PackageManager feature parity
+
+Runtime testing showed that stock SM-F711B does not declare the experimental `com.sec.feature.dual_lcd` / `com.sec.feature.folder_type` PackageManager features, so that path is no longer used. `scripts/prepare_b2q_fold_cover.sh` instead stages the target's real `*/etc/devicestate/*.xml`, `*/etc/displayconfig/*.xml`, input/display port associations and hinge-angle feature XMLs. It also stages Samsung's foldable-only Flex mode panel app (`ControlPanel.apk`, package `com.samsung.controlpanel`) when it exists in the extracted target firmware. `target/b2q/patches/fold_cover_stock/customize.sh` verifies SHA-256 values and restores those files into the active workdir. If the Android 16 donor already contains its own Flex panel, the donor copy is preserved. Android 15 SystemUI, Settings and AlwaysOnDisplay APKs are deliberately not transplanted.

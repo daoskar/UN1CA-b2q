@@ -11,11 +11,14 @@ CAMERA_PREP="$ROOT/scripts/prepare_b2q_camera.sh"
 DVFS_PREP="$ROOT/scripts/prepare_b2q_dvfs.sh"
 OVERLAY_PREP="$ROOT/scripts/prepare_b2q_overlay.sh"
 VINTF_PREP="$ROOT/scripts/prepare_b2q_vintf.sh"
+FOLD_COVER_PREP="$ROOT/scripts/prepare_b2q_fold_cover.sh"
 AOD_PREP="$ROOT/scripts/prepare_b2q_aod.sh"
 AOD_MODULE="$ROOT/target/b2q/patches/aod_clock_transition/customize.sh"
 AOD_MODULE_PROP="$ROOT/target/b2q/patches/aod_clock_transition/module.prop"
 CAMERA_GUARD="$ROOT/target/b2q/patches/camera_quick_setting_guard/customize.sh"
 CAMERA_GUARD_PROP="$ROOT/target/b2q/patches/camera_quick_setting_guard/module.prop"
+FOLD_COVER_MODULE="$ROOT/target/b2q/patches/fold_cover_stock/customize.sh"
+FOLD_COVER_MODULE_PROP="$ROOT/target/b2q/patches/fold_cover_stock/module.prop"
 BUILD_WRAPPER="$ROOT/scripts/build_b2q.sh"
 ERRORS=0
 WARNINGS=0
@@ -24,37 +27,73 @@ ok()   { printf 'OK    %s\n' "$*"; }
 warn() { printf 'WARN  %s\n' "$*" >&2; WARNINGS=$((WARNINGS + 1)); }
 fail() { printf 'FAIL  %s\n' "$*" >&2; ERRORS=$((ERRORS + 1)); }
 
-require_file() { [[ -f "$1" ]] && ok "present: ${1#$ROOT/}" || fail "missing: ${1#$ROOT/}"; }
+require_file() {
+    local file="$1" rel
+    rel="${file#"$ROOT"/}"
+    if [[ -f "$file" ]]; then
+        ok "present: $rel"
+    else
+        fail "missing: $rel"
+    fi
+}
 require_eq() {
     local name="$1" expected="$2" actual="${!1-}"
-    [[ "$actual" == "$expected" ]] && ok "$name=$actual" || fail "$name='$actual' (expected '$expected')"
+    if [[ "$actual" == "$expected" ]]; then
+        ok "$name=$actual"
+    else
+        fail "$name='$actual' (expected '$expected')"
+    fi
 }
 require_bool() {
     local name="$1" actual="${!1-}"
-    [[ "$actual" == true || "$actual" == false ]] && ok "$name=$actual" || fail "$name must be true or false (got '$actual')"
+    if [[ "$actual" == true || "$actual" == false ]]; then
+        ok "$name=$actual"
+    else
+        fail "$name must be true or false (got '$actual')"
+    fi
 }
 require_positive_int() {
     local name="$1" actual="${!1-}"
-    [[ "$actual" =~ ^[0-9]+$ && "$actual" -gt 0 ]] && ok "$name=$actual" || fail "$name must be a positive integer (got '$actual')"
+    if [[ "$actual" =~ ^[0-9]+$ && "$actual" -gt 0 ]]; then
+        ok "$name=$actual"
+    else
+        fail "$name must be a positive integer (got '$actual')"
+    fi
 }
 require_grep() {
     local pattern="$1" file="$2" label="$3"
-    grep -Eq "$pattern" "$file" && ok "$label" || fail "$label"
+    if grep -Eq "$pattern" "$file"; then
+        ok "$label"
+    else
+        fail "$label"
+    fi
+}
+check_bash_syntax() {
+    local file="$1" label="$2"
+    if bash -n "$file"; then
+        ok "$label"
+    else
+        fail "$label"
+    fi
 }
 
-for file in "$TARGET" "$PLATFORM" "$FSTAB" "$ASSERTIONS" "$CAMERA_PREP" "$DVFS_PREP" "$OVERLAY_PREP" "$VINTF_PREP" "$AOD_PREP" "$AOD_MODULE" "$AOD_MODULE_PROP" "$CAMERA_GUARD" "$CAMERA_GUARD_PROP" "$BUILD_WRAPPER"; do require_file "$file"; done
-(( ERRORS == 0 )) || exit 1
+for file in "$TARGET" "$PLATFORM" "$FSTAB" "$ASSERTIONS" "$CAMERA_PREP" "$DVFS_PREP" "$OVERLAY_PREP" "$VINTF_PREP" "$FOLD_COVER_PREP" "$AOD_PREP" "$AOD_MODULE" "$AOD_MODULE_PROP" "$CAMERA_GUARD" "$CAMERA_GUARD_PROP" "$FOLD_COVER_MODULE" "$FOLD_COVER_MODULE_PROP" "$BUILD_WRAPPER"; do require_file "$file"; done
+if (( ERRORS != 0 )); then
+    exit 1
+fi
 
-bash -n "$TARGET" && ok "target config syntax" || fail "target config syntax"
-bash -n "$PLATFORM" && ok "platform config syntax" || fail "platform config syntax"
-bash -n "$CAMERA_PREP" && ok "camera preparation syntax" || fail "camera preparation syntax"
-bash -n "$DVFS_PREP" && ok "DVFS preparation syntax" || fail "DVFS preparation syntax"
-bash -n "$OVERLAY_PREP" && ok "RRO preparation syntax" || fail "RRO preparation syntax"
-bash -n "$VINTF_PREP" && ok "VINTF preparation syntax" || fail "VINTF preparation syntax"
-bash -n "$AOD_PREP" && ok "AOD preparation syntax" || fail "AOD preparation syntax"
-bash -n "$AOD_MODULE" && ok "AOD workdir module syntax" || fail "AOD workdir module syntax"
-bash -n "$CAMERA_GUARD" && ok "Samsung Camera guard module syntax" || fail "Samsung Camera guard module syntax"
-bash -n "$BUILD_WRAPPER" && ok "build wrapper syntax" || fail "build wrapper syntax"
+check_bash_syntax "$TARGET" "target config syntax"
+check_bash_syntax "$PLATFORM" "platform config syntax"
+check_bash_syntax "$CAMERA_PREP" "camera preparation syntax"
+check_bash_syntax "$DVFS_PREP" "DVFS preparation syntax"
+check_bash_syntax "$OVERLAY_PREP" "RRO preparation syntax"
+check_bash_syntax "$VINTF_PREP" "VINTF preparation syntax"
+check_bash_syntax "$FOLD_COVER_PREP" "fold/cover stock preparation syntax"
+check_bash_syntax "$AOD_PREP" "AOD preparation syntax"
+check_bash_syntax "$AOD_MODULE" "AOD workdir module syntax"
+check_bash_syntax "$CAMERA_GUARD" "Samsung Camera guard module syntax"
+check_bash_syntax "$FOLD_COVER_MODULE" "fold/cover stock module syntax"
+check_bash_syntax "$BUILD_WRAPPER" "build wrapper syntax"
 
 # Match UN1CA's load order: target -> platform -> target.
 # shellcheck disable=SC1090
@@ -93,7 +132,11 @@ for v in TARGET_SUPER_PARTITION_SIZE TARGET_SAMSUNG_DYNAMIC_PARTITIONS_SIZE \
          TARGET_VENDOR_BOOT_PARTITION_SIZE TARGET_CACHE_PARTITION_SIZE; do
     require_positive_int "$v"
     value="${!v}"
-    (( value % 4096 == 0 )) && ok "$v is 4 KiB aligned" || fail "$v is not 4 KiB aligned"
+    if (( value % 4096 == 0 )); then
+        ok "$v is 4 KiB aligned"
+    else
+        fail "$v is not 4 KiB aligned"
+    fi
 done
 
 if (( TARGET_SUPER_PARTITION_SIZE > TARGET_SAMSUNG_DYNAMIC_PARTITIONS_SIZE )); then
@@ -103,11 +146,25 @@ else
 fi
 
 GAP=$((TARGET_SUPER_PARTITION_SIZE - TARGET_SAMSUNG_DYNAMIC_PARTITIONS_SIZE))
-[[ "$GAP" -eq 4194304 ]] && ok "dynamic metadata reserve is 4 MiB" || warn "unexpected super/group gap: $GAP bytes"
+if [[ "$GAP" -eq 4194304 ]]; then
+    ok "dynamic metadata reserve is 4 MiB"
+else
+    warn "unexpected super/group gap: $GAP bytes"
+fi
 
-[[ " ${TARGET_ASSERT_MODEL[*]} " == *" SM-F711B "* ]] && ok "SM-F711B model assertion" || fail "SM-F711B missing from TARGET_ASSERT_MODEL"
-[[ "$TARGET_FIRMWARE" =~ ^SM-F711B/[A-Z0-9]{3,4}/([0-9]{15}|[A-Za-z0-9]{8,32})$ ]] && ok "TARGET_FIRMWARE format" || fail "invalid TARGET_FIRMWARE format"
-[[ "$TARGET_FIRMWARE" == "SM-F711B/EUX/352493641234563" ]] && warn "using placeholder FUS identity; set B2Q_TARGET_FIRMWARE to your own full IMEI/serial if download fails"
+if [[ " ${TARGET_ASSERT_MODEL[*]} " == *" SM-F711B "* ]]; then
+    ok "SM-F711B model assertion"
+else
+    fail "SM-F711B missing from TARGET_ASSERT_MODEL"
+fi
+if [[ "$TARGET_FIRMWARE" =~ ^SM-F711B/[A-Z0-9]{3,4}/([0-9]{15}|[A-Za-z0-9]{8,32})$ ]]; then
+    ok "TARGET_FIRMWARE format"
+else
+    fail "invalid TARGET_FIRMWARE format"
+fi
+if [[ "$TARGET_FIRMWARE" == "SM-F711B/EUX/352493641234563" ]]; then
+    warn "using placeholder FUS identity; set B2Q_TARGET_FIRMWARE to your own full IMEI/serial if download fails"
+fi
 
 for part in system vendor product odm; do
     require_grep "^${part}[[:space:]]+/${part}[[:space:]]+" "$FSTAB" "fstab logical partition: $part"
@@ -122,7 +179,7 @@ require_grep 'target/b2q/dvfs' "$DVFS_PREP" "DVFS files are generated from extra
 require_grep 'siop_model\.xml' "$DVFS_PREP" "DVFS helper includes siop_model.xml"
 require_grep 'SamsungDeviceHealthManagerService\.apk' "$DVFS_PREP" "DVFS helper extracts the stock SDHMS APK model"
 require_grep 'target/b2q/overlay' "$OVERLAY_PREP" "RRO resources are generated in the target overlay directory"
-require_grep 'DEST/dimens\.xml|\$STAGE/dimens\.xml' "$OVERLAY_PREP" "RRO helper writes UN1CA-compatible flat overlay/dimens.xml"
+require_grep "DEST/dimens\\.xml|\\\$STAGE/dimens\\.xml" "$OVERLAY_PREP" "RRO helper writes UN1CA-compatible flat overlay/dimens.xml"
 require_grep 'flat-values-v4-integer-px' "$OVERLAY_PREP" "RRO helper uses the integer-pixel flat overlay contract"
 require_grep 'auto_generated_rro_product\.apk' "$OVERLAY_PREP" "RRO helper derives resources from stock target firmware"
 require_grep 'physical_power_button_center_screen_location_y' "$OVERLAY_PREP" "RRO helper checks stock power-button geometry"
@@ -136,6 +193,16 @@ require_grep 'compatibility_matrix\.device\.xml' "$VINTF_PREP" "VINTF helper pre
 require_grep 'system/system/etc/vintf|system/etc/vintf' "$VINTF_PREP" "VINTF helper prioritizes the stock system matrix"
 require_grep 'compatibility-matrix' "$VINTF_PREP" "VINTF helper validates the XML root"
 require_grep 'TARGET_FIRMWARE_DIR.*prepare_b2q_vintf|prepare_b2q_vintf.*TARGET_FIRMWARE_DIR' "$BUILD_WRAPPER" "build wrapper prepares VINTF before make_rom"
+require_grep 'etc/devicestate' "$FOLD_COVER_PREP" "fold/cover helper stages stock device-state XML"
+require_grep 'etc/displayconfig' "$FOLD_COVER_PREP" "fold/cover helper stages stock display config"
+require_grep 'hinge_angle' "$FOLD_COVER_PREP" "fold/cover helper preserves hinge-angle feature declaration"
+require_grep 'ControlPanel\.apk|controlpanel' "$FOLD_COVER_PREP" "fold/cover helper looks for the stock Samsung Flex mode panel"
+require_grep 'does NOT transplant AOD|do NOT transplant AOD|NOT transplant AOD' "$FOLD_COVER_PREP" "fold/cover helper avoids downgrading donor AOD/SystemUI/Settings"
+require_grep 'SOURCE_ROOT=.*fold-cover/root' "$FOLD_COVER_MODULE" "fold/cover module reads stock staging root"
+require_grep 'sha256sum' "$FOLD_COVER_MODULE" "fold/cover module verifies staged checksums"
+require_grep 'donor already contains' "$FOLD_COVER_MODULE" "fold/cover module preserves a donor Flex panel when present"
+require_grep '^id=b2q_fold_cover_stock$' "$FOLD_COVER_MODULE_PROP" "fold/cover module identity"
+require_grep 'prepare_b2q_fold_cover\.sh.*TARGET_FIRMWARE_DIR' "$BUILD_WRAPPER" "build wrapper prepares stock fold/cover support before make_rom"
 require_grep 'active work tree|active-work-tree|active workdir' "$AOD_PREP" "AOD helper uses the active-work-tree policy"
 require_grep 'SEC_FLOATING_FEATURE_FRAMEWORK_CONFIG_AOD_ITEM' "$AOD_MODULE" "AOD module edits the Samsung AOD item in the work tree"
 require_grep 'WORK_DIR.*floating_feature\.xml' "$AOD_MODULE" "AOD module patches active UN1CA floating_feature.xml"

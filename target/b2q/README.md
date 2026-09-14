@@ -48,3 +48,7 @@ before the common UN1CA VINTF module runs.
 
 
 The camera guard also protects `getIndicatorItemList()` by skipping commands whose `mQuickSettingViewItemMap` lookup returns null before `Q2/p.a()` is called.
+
+## Fold / cover display / Flex mode
+
+Before `make_rom`, `scripts/prepare_b2q_fold_cover.sh` copies the real SM-F711B device-state and display configuration into `target/b2q/fold-cover/`, preserving partition-relative paths and SHA-256 hashes. It also stages the stock Samsung Flex mode panel (`ControlPanel.apk`, package `com.samsung.controlpanel`) when that APK exists in the target firmware. The `fold_cover_stock` target patch restores those files into the active workdir and only uses the Android 15 ControlPanel when the Android 16 donor does not already provide one. Core donor APKs such as SystemUI, Settings and AlwaysOnDisplay are not downgraded.

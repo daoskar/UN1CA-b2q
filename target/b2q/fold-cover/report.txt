@@ -1,0 +1,19 @@
+B2Q stock fold/cover preparation report
+firmware=/home/daoskar/UN1CA/out/fw/SM-F711B_EUX
+staged_files=7
+device_state_files=2
+display_config_files=3
+hinge_feature_files=1
+control_panel=missing
+device_state_tokens=HALF_FOLDED,OPEN
+
+Device-state files:
+  vendor/etc/devicestate/device_state_configuration.xml
+  vendor/etc/devicestate/sec/device_state_configuration.xml
+
+Display-config files:
+  system/system/etc/displayconfig/default_television.xml
+  vendor/etc/displayconfig/display_layout_configuration.xml
+  vendor/etc/displayconfig/sec/display_layout_configuration.xml
+
+WARNING: stock ControlPanel/FlexModePanel APK was not found
