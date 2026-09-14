@@ -1,0 +1,4 @@
+id=b2q_aod_clock_transition
+name=Galaxy Z Flip3 AOD transition compatibility
+author=UN1CA b2q port
+description=Disables only the unsupported AOD clock-transition token in the active work directory while preserving Always On Display.

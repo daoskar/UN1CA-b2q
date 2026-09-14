@@ -1,0 +1,28 @@
+name: Validate b2q port
+
+on:
+  pull_request:
+    paths:
+      - 'target/b2q/**'
+      - 'platform/sm8350/**'
+      - 'scripts/*b2q*.sh'
+      - 'scripts/sync_upstream.sh'
+      - '.github/workflows/*b2q*.yml'
+      - '.github/workflows/sync-upstream.yml'
+  push:
+    paths:
+      - 'target/b2q/**'
+      - 'platform/sm8350/**'
+      - 'scripts/*b2q*.sh'
+      - 'scripts/sync_upstream.sh'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate target and shell syntax
+        run: |
+          bash -n scripts/validate_b2q.sh scripts/audit_b2q_firmware.sh scripts/build_b2q.sh scripts/prepare_b2q_camera.sh scripts/prepare_b2q_dvfs.sh scripts/prepare_b2q_overlay.sh scripts/prepare_b2q_aod.sh scripts/sync_upstream.sh
+          scripts/validate_b2q.sh

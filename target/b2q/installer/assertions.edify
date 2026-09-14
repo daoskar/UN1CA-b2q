@@ -1,0 +1,1 @@
+is_substring("F711BXX", getprop("ro.boot.bootloader")) && verify_no_downgrade(getprop("ro.boot.bootloader"), "F711BXXUCJYD9") && abort("E3003: This package requires Android 15 firmware for SM-F711B.");

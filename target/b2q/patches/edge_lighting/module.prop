@@ -1,0 +1,4 @@
+id=b2q_edge_lighting
+name=Galaxy Z Flip3 edge lighting fix
+author=UN1CA contributors
+description=Uses the target model for foldable display corner and edge-lighting calculations.

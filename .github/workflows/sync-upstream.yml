@@ -1,0 +1,67 @@
+name: Sync UN1CA upstream
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_branch:
+        description: Upstream branch
+        required: true
+        default: sixteen
+  schedule:
+    - cron: '20 4 * * 1'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-un1ca-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      UPSTREAM_BRANCH: ${{ inputs.upstream_branch || 'sixteen' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: sixteen
+
+      - name: Merge upstream into an automation branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote add upstream https://github.com/salvogiangri/UN1CA.git 2>/dev/null || \
+            git remote set-url upstream https://github.com/salvogiangri/UN1CA.git
+          git fetch --prune upstream "$UPSTREAM_BRANCH"
+          SYNC_BRANCH="automation/sync-upstream-${UPSTREAM_BRANCH//\//-}"
+          git checkout -B "$SYNC_BRANCH" origin/sixteen
+          git merge --no-edit "upstream/$UPSTREAM_BRANCH"
+          scripts/validate_b2q.sh
+          if git diff --quiet origin/sixteen...HEAD; then
+            echo 'No upstream changes to propose.'
+            echo 'NO_CHANGES=true' >> "$GITHUB_ENV"
+            exit 0
+          fi
+          git push --force-with-lease origin "$SYNC_BRANCH"
+          echo "SYNC_BRANCH=$SYNC_BRANCH" >> "$GITHUB_ENV"
+
+      - name: Open or refresh pull request
+        if: env.NO_CHANGES != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh pr view "$SYNC_BRANCH" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh pr edit "$SYNC_BRANCH" --repo "$GITHUB_REPOSITORY" \
+              --title "Sync UN1CA upstream ($UPSTREAM_BRANCH)" \
+              --body "Automated upstream merge. The b2q validator passed. A real-device smoke test is still required before release."
+          else
+            gh pr create --repo "$GITHUB_REPOSITORY" --base sixteen --head "$SYNC_BRANCH" \
+              --title "Sync UN1CA upstream ($UPSTREAM_BRANCH)" \
+              --body "Automated upstream merge. The b2q validator passed. A real-device smoke test is still required before release."
+          fi

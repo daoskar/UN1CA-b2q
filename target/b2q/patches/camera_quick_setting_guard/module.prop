@@ -1,0 +1,4 @@
+id=b2q_camera_quick_setting_guard
+name=Galaxy Z Flip3 adaptive three-stage Samsung Camera guard
+author=UN1CA b2q runtime diagnostic patch
+description=Omits the unsupported top-level picture-size command and skips missing main-list or indicator-list view items before donor SamsungCamera dereferences or resolves them.
