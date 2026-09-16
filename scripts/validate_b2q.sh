@@ -78,6 +78,10 @@ check_bash_syntax() {
 }
 
 for file in "$TARGET" "$PLATFORM" "$FSTAB" "$ASSERTIONS" "$CAMERA_PREP" "$DVFS_PREP" "$OVERLAY_PREP" "$VINTF_PREP" "$FOLD_COVER_PREP" "$AOD_PREP" "$AOD_MODULE" "$AOD_MODULE_PROP" "$CAMERA_GUARD" "$CAMERA_GUARD_PROP" "$FOLD_COVER_MODULE" "$FOLD_COVER_MODULE_PROP" "$BUILD_WRAPPER"; do require_file "$file"; done
+for file in "$ROOT/scripts/b2q_fold_cover_audit.py" "$ROOT/scripts/refresh_b2q_target_files.sh" "$ROOT/scripts/collect_b2q_fold_logs.py" "$ROOT/scripts/test_b2q_fold_cover.py"; do
+    require_file "$file"
+done
+check_bash_syntax "$ROOT/scripts/refresh_b2q_target_files.sh" "fresh target-files packaging syntax"
 if (( ERRORS != 0 )); then
     exit 1
 fi

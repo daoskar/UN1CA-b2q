@@ -201,10 +201,19 @@ fi
 "$ROOT/scripts/prepare_b2q_aod.sh" "$TARGET_FIRMWARE_DIR" status
 
 if $INCREMENTAL; then
-    run_cmd make_rom --build-rom-zip
+    run_cmd make_rom --no-target-files
 else
-    run_cmd make_rom --force --build-rom-zip
+    run_cmd make_rom --force --no-target-files
 fi
+
+# Audit AFTER common patches and rebuilt APKs, BEFORE making images/ZIPs.
+python3 "$ROOT/scripts/b2q_fold_cover_audit.py" verify \
+    "$WORK_DIR" "$ROOT/target/b2q/fold-cover" "$OUT_DIR/b2q-fold-cover-audit.json"
+
+# make_rom reuses an existing target-files ZIP even after --force. Archive it
+# before packaging so the flashable ZIP is built from this verified workdir.
+"$ROOT/scripts/refresh_b2q_target_files.sh" "$OUT_DIR"
+run_cmd make_rom --build-rom-zip
 
 restore_b2q_aod_input
 AOD_INPUT_APPLIED=false

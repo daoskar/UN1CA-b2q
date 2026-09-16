@@ -6,6 +6,7 @@ on:
       - 'target/b2q/**'
       - 'platform/sm8350/**'
       - 'scripts/*b2q*.sh'
+      - 'scripts/*b2q*.py'
       - 'scripts/sync_upstream.sh'
       - '.github/workflows/*b2q*.yml'
       - '.github/workflows/sync-upstream.yml'
@@ -14,6 +15,7 @@ on:
       - 'target/b2q/**'
       - 'platform/sm8350/**'
       - 'scripts/*b2q*.sh'
+      - 'scripts/*b2q*.py'
       - 'scripts/sync_upstream.sh'
   workflow_dispatch:
 
@@ -26,3 +28,5 @@ jobs:
         run: |
           bash -n scripts/validate_b2q.sh scripts/audit_b2q_firmware.sh scripts/build_b2q.sh scripts/prepare_b2q_camera.sh scripts/prepare_b2q_dvfs.sh scripts/prepare_b2q_overlay.sh scripts/prepare_b2q_fold_cover.sh scripts/prepare_b2q_aod.sh scripts/sync_upstream.sh
           scripts/validate_b2q.sh
+      - name: Fold cover regression tests
+        run: python3 scripts/test_b2q_fold_cover.py

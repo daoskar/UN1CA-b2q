@@ -8,22 +8,12 @@ SOURCE_ROOT="$SRC_DIR/target/b2q/fold-cover/root"
 MANIFEST="$SRC_DIR/target/b2q/fold-cover/manifest.tsv"
 
 if [[ ! -d "$SOURCE_ROOT" || ! -f "$MANIFEST" ]]; then
-    LOG "- B2Q-FOLD-COVER: no stock staging directory; leaving workdir unchanged"
-    return 0 2>/dev/null || exit 0
+    ABORT "Missing stock fold/cover staging: run scripts/build_b2q.sh"
+    return 1
 fi
 
 resolve_destination() {
-    local rel="$1" top
-    top="${rel%%/*}"
-    case "$top" in
-        system|vendor|product|system_ext|odm)
-            if [[ -d "$WORK_DIR/$top" ]]; then
-                printf '%s\n' "$WORK_DIR/$rel"
-                return 0
-            fi
-            ;;
-    esac
-    return 1
+    python3 "$SRC_DIR/scripts/b2q_fold_cover_audit.py" resolve "$WORK_DIR" "$1"
 }
 
 is_control_panel_path() {
@@ -46,15 +36,14 @@ while IFS=$'\t' read -r rel expected_sha reason; do
     fi
 
     if ! dst="$(resolve_destination "$rel")"; then
-        LOG "- B2Q-FOLD-COVER: skip $rel (partition root is not present in active workdir)"
-        skipped=$((skipped + 1))
-        continue
+        ABORT "Cannot map stock fold/cover file into workdir: $rel"
+        return 1
     fi
 
     # Prefer an Android 16 donor copy of the Flex panel if UN1CA ever starts
     # shipping one. The stock Android 15 app is only used to fill a missing
     # foldable-only package on the slab-phone donor.
-    if is_control_panel_path "$rel" && [[ -f "$dst" ]]; then
+    if [[ "$reason" == "stock Samsung Flex mode panel application" ]] && [[ -f "$dst" ]]; then
         LOG "- B2Q-FLEX: donor already contains $(basename "$dst"); keeping donor version"
         skipped=$((skipped + 1))
         continue

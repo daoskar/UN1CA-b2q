@@ -26,6 +26,7 @@ import re
 import shutil
 import sys
 import zipfile
+import xml.etree.ElementTree as ET
 
 fw = Path(sys.argv[1]).resolve()
 dest = Path(sys.argv[2]).resolve()
@@ -54,6 +55,17 @@ def add(path: Path, reason: str, collected: dict[Path, str]) -> None:
         return
     collected.setdefault(rel, reason)
 
+
+# Keep an immutable stock reference for the final workdir audit. Upstream
+# __floating_feature already merges target features; do not invent config vars.
+ff_candidates = [fw / item for item in (
+    "system/system/etc/floating_feature.xml", "system/etc/floating_feature.xml")]
+ff = next((item for item in ff_candidates if item.is_file()), None)
+if ff is None:
+    raise SystemExit("Stock floating_feature.xml missing; incomplete F711B extraction")
+ET.parse(ff)
+shutil.copy2(ff, dest / "stock-floating-feature.xml")
+(dest / "stock-floating-feature.sha256").write_text(sha256(ff.read_bytes()).hexdigest() + "\n")
 
 collected: dict[Path, str] = {}
 
@@ -128,6 +140,9 @@ apk_candidates.sort(key=lambda item: (
 control_panel: Path | None = apk_candidates[0][1] if apk_candidates else None
 if control_panel is not None:
     add(control_panel, "stock Samsung Flex mode panel application", collected)
+
+if not collected:
+    raise SystemExit("No fold/cover files found in stock; refusing a successful no-op patch")
 
 # Copy staged files with their exact partition-relative path.
 manifest_rows: list[tuple[str, str, str]] = []
